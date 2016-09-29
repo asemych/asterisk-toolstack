@@ -1,0 +1,8 @@
+[Unit]
+Description=Sync Asterisk config files
+
+[Service]
+Type=oneshot
+User=asterisk
+Group=asterisk
+ExecStart=/usr/local/sbin/astsync

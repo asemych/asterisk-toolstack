@@ -1,0 +1,7 @@
+SHELL=/bin/bash
+# Move CDR files every hour
+01 * * * * asterisk /usr/sbin/logrotate -f /etc/asterisk/cron/asterisk.cdr >/dev/null 2>&1
+# Backup Asterisk config files once a day
+@daily asterisk /usr/sbin/logrotate -f /etc/asterisk/cron/asterisk.config >/dev/null 2>&1
+# Rotate Asterisk log files once a day at 23:59
+59 23 * * * asterisk /usr/sbin/logrotate -f /etc/asterisk/cron/asterisk.logs >/dev/null 2>&1

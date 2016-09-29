@@ -1,0 +1,36 @@
+#!/bin/bash
+
+src_dir=/home/asterisk/config/
+dest_dir=/etc/asterisk/
+home_dir=/home/asterisk
+
+diff_file=${home_dir}/changelog/config-`date +%Y%m%d-%H%M%S`.diff
+
+diff -Naur --ignore-file-name-case \
+ --strip-trailing-cr \
+ --exclude "*.swp" \
+ --exclude "*~" \
+ --exclude "backup" \
+ --exclude "cron" \
+ --exclude "keys" \
+ --exclude "clients-enabled" \
+ --exclude "trunks-enabled" \
+ --exclude "ivr-enabled" \
+ ${dest_dir} ${src_dir} > ${diff_file}
+
+if [ ! -s ${diff_file} ]; then
+  rm -f ${diff_file}
+fi
+
+sudo chown -R :asterisk ${src_dir}
+
+/usr/bin/rsync -rpt \
+ --delete \
+ --exclude "*.swp" \
+ --exclude "backup" \
+ --exclude "cron" \
+ --exclude "keys" \
+ --exclude "clients-enabled" \
+ --exclude "trunks-enabled" \
+ --exclude "ivr-enabled" \
+  ${src_dir} ${dest_dir}

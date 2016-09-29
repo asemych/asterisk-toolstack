@@ -1,0 +1,64 @@
+#!/bin/bash
+
+function usage {
+  echo "Usage: astdisable {client|trunk|ivr} <target_name>"
+  echo "Example:";
+  echo "    Next command will disable configuration for Volition_sip.conf and Volition_ext.conf files";
+  echo "    astdisable client Volition";
+  exit 1;
+}
+
+if [ $# -lt 2 ]; then usage; fi;
+
+case $1 in
+  tr* ) target=trunks;;
+  cl* ) target=clients;;
+  ivr ) target=ivr;;
+  *   ) echo "Error: Invalid target '$1' specified."; usage
+esac
+
+target_name=$2
+configs_dir=/etc/asterisk/${target}-configs
+enabled_dir=/etc/asterisk/${target}-enabled
+
+if [ ! -d ${enabled_dir} ]; then
+  echo "Error: Target directory ${enabled_dir} does not exists.";
+  exit 255;
+fi
+
+if [ ${target} = "trunks" -o ${target} = "clients" ]
+then
+  test -e ${enabled_dir}/${target_name}_sip.conf && rm -f ${enabled_dir}/${target_name}_sip.conf 1>/dev/null
+  test -e ${enabled_dir}/private_${target_name}_sip.conf && rm -f ${enabled_dir}/private_${target_name}_sip.conf 1>/dev/null
+  test -e ${enabled_dir}/${target_name}_ext.conf && rm -f ${enabled_dir}/${target_name}_ext.conf 1>/dev/null
+  test -e ${enabled_dir}/private_${target_name}_ext.conf && rm -f ${enabled_dir}/private_${target_name}_ext.conf 1>/dev/null
+
+  regstring=$(grep "register" ${configs_dir}/${target_name}_sip.conf)
+  grep "${regstring}" /etc/asterisk/sip.conf &>/dev/null
+  if [ $? -eq 0 ]; then
+    regstring=$(echo ${regstring} | sed -e 's/[\/&]/\\&/g')
+    sed -in "/${regstring}/d" /etc/asterisk/sip.conf
+  fi
+
+  if [ ! -f ${enabled_dir}/${target_name}_sip.conf -a ! -f ${enabled_dir}/${target_name}_ext.conf ]; then
+    echo "Configuration for ${target_name} disabled. Please use \`astreload\` to reload Asterisk configuration.";
+    exit 0;
+  else
+    echo "Error: Something went wrong. Client configuration can't be disabled.";
+    exit 2;
+  fi
+fi
+
+if [ ${target} = "ivr" ]
+then
+  test -f ${enabled_dir}/${target_name}_ivr.conf && rm -f ${enabled_dir}/${target_name}_ivr.conf 1>/dev/null
+
+  if [ ! -f ${configs_dir}/${target_name}_ivr.conf -a ! -f ${configs_dir}/${target_name}_ivr.conf ]; then
+    echo "Configuration for ${target_name} disabled. Please use \`astreload\` to reload Asterisk configuration.";
+    exit 0;
+  else
+    echo "Error: Something went wrong. Client configuration can't be disabled.";
+    exit 2;
+  fi
+fi
+

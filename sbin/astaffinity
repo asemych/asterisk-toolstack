@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Asterisk affinity script v.2 addopted for Centos 7
+#   and Xen Server 6.5 network interface TX/RX interrupts
+#   balancing over separate CPU cores.
+
+eth0_rx_int=$(sudo cat /proc/interrupts | grep [[:space:]]eth0-rx | sed -r "s/[[:space:]]*([1-9]{1,2}):.*/\1/")
+eth0_tx_int=$(sudo cat /proc/interrupts | grep [[:space:]]eth0-tx | sed -r "s/[[:space:]]*([1-9]{1,2}):.*/\1/")
+eth0_rx_cpu=$(sudo cat /proc/irq/${eth0_rx_int}/smp_affinity)
+eth0_tx_cpu=$(sudo cat /proc/irq/${eth0_tx_int}/smp_affinity)
+
+ast_affinity=$((0xffff ^ (0x${eth0_rx_cpu} ^ 0x${eth0_tx_cpu})))
+
+printf "eth0_tx: %x eth0_rx: %x ast_aff: %x\n" 0x${eth0_rx_cpu} 0x${eth0_tx_cpu} ${ast_affinity}
+
+pname="asterisk"
+for pid in $(pgrep "${pname}"); do
+  [ "${pid}" != "" ] || exit
+  sudo taskset -ap $(printf "%x" ${ast_affinity}) "${pid}" 1>/dev/null
+done
+
+printf "Asterisk CPU affinity changed to 0x%x\n" ${ast_affinity}

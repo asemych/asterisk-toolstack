@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch and sync Asterisk config directory
+
+[Path]
+PathChanged=/home/asterisk/config/
+PathChanged=/home/asterisk/config/clients-configs/
+PathChanged=/home/asterisk/config/ivr-configs/
+PathChanged=/home/asterisk/config/trunks-configs/
+
+[Install]
+WantedBy=multi-user.target

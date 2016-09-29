@@ -1,0 +1,35 @@
+/var/log/asterisk/messages
+/var/log/asterisk/queue_log
+/var/log/asterisk/security
+/var/log/asterisk/verbose
+{
+	daily
+	missingok
+	dateext
+	compress
+	delaycompress
+	rotate 30
+	maxage 30
+	nocreate
+	sharedscripts
+	postrotate
+		/usr/sbin/asterisk -rx 'logger rotate' > /dev/null 2> /dev/null
+	endscript
+}
+
+/var/log/asterisk/h323_log
+{
+        copytruncate
+        daily
+        missingok
+        dateext
+        compress
+        delaycompress
+        rotate 30
+        maxage 30
+        nocreate
+#       sharedscripts
+#       postrotate
+#               /usr/sbin/asterisk -rx 'ooh323 reload' > /dev/null 2> /dev/null
+#       endscript
+}

@@ -1,0 +1,110 @@
+#!/bin/bash
+
+function usage {
+  echo "Usage: astenable {client|trunk|ivr} <target_name>"
+  echo "Examples:";
+  echo " * To enable configuration for Volition_sip.conf and Volition_ext.conf files, run:";
+  echo "   astenable client Volition";
+  echo " * To enable private/local configuration for private_SKM_sip.conf and private_SKM_ext.conf , run:";
+  echo "   astenable trunk SKM";
+  exit 1;
+}
+
+if [ $# -lt 2 ]; then usage; fi;
+
+case $1 in
+  tr* ) target=trunks;;
+  cl* ) target=clients;;
+  ivr ) target=ivr;;
+  *   ) echo "Error: Invalid target '$1' specified."; usage
+esac
+
+target_name=$2
+configs_dir=/etc/asterisk/${target}-configs
+enabled_dir=/etc/asterisk/${target}-enabled
+
+if [ ! -d ${enabled_dir} ]; then
+  echo "Error: Target directory ${enabled_dir} does not exists.";
+  exit 255;
+fi
+
+# Check format of sip.conf file (dos or unix)
+grep -c $'\r\n$' /etc/asterisk/sip.conf &>/dev/null
+if [ $? -eq 0 ]; then
+  NL="\r\n"
+else
+  NL="\r"
+fi
+
+# breakpoint
+#exit 0;
+
+function conf_unavail {
+  echo "Error: Configuration file is missing.";
+  echo "Please check if file $1 exists.";
+  exit 2;
+}
+
+if [ ${target} = "trunks" -o ${target} = "clients" ]
+then
+  if [ ! -e ${configs_dir}/${target_name}_sip.conf ]; then
+    if [ ! -e ${configs_dir}/private_${target_name}_sip.conf ]; then
+      conf_unavail ${configs_dir}/${target_name}_sip.conf;
+    else
+      conf_sip=private_${target_name}_sip.conf
+    fi
+  else
+    conf_sip=${target_name}_sip.conf
+  fi
+
+  if [ ! -e ${configs_dir}/${target_name}_ext.conf ]; then
+    if [ ! -e ${configs_dir}/private_${target_name}_ext.conf ]; then
+      conf_unavail ${configs_dir}/${target_name}_ext.conf;
+    else
+      conf_ext=private_${target_name}_ext.conf
+    fi
+  else
+    conf_ext=${target_name}_ext.conf
+  fi
+
+  regstring=$(grep "register" ${configs_dir}/${conf_sip})
+  if [ ! -z "${regstring}" ]; then
+    # Check if registration string already exist
+    grep "${regstring}" /etc/asterisk/sip.conf &>/dev/null
+    if [ ! $? -eq 0 ]; then
+      regstring=$(echo ${regstring} | sed -e 's/[\/&]/\\&/g')
+      sed -in "0,/^[;]*register[[:space:]].*$/ s//${regstring}${NL}&/" /etc/asterisk/sip.conf
+    fi
+  fi
+
+  test -e ${enabled_dir}/${conf_sip} || ln -s ${configs_dir}/${conf_sip} ${enabled_dir}
+  test -e ${enabled_dir}/${conf_ext} || ln -s ${configs_dir}/${conf_ext} ${enabled_dir}
+
+  if [ $? -eq 0 ]; then
+    echo "Configuration for ${target_name} enabled. Please use \`astreload\` to reload Asterisk configuration."
+    exit 0
+  else
+    echo "Error: Configuration for ${target_name} is not enabled. Please see error message above."
+    exit 1
+  fi
+fi
+
+if [ ${target} = "ivr" ]
+then
+  if [ ! -f ${configs_dir}/${target_name}_ivr.conf ]; then
+    echo "Error: Some of the configuration files are missing.";
+    echo "Please check if file ${target_name}_ivr.conf exists in ${configs_dir}";
+    exit 2;
+  fi
+
+  test -f ${enabled_dir}/${target_name}_ivr.conf || ln -s ${configs_dir}/${target_name}_ivr.conf ${enabled_dir}
+
+  if [ $? -eq 0 ]; then
+    echo "Configuration for ${target_name} enabled. Please use \`astreload\` to reload Asterisk configuration."
+    exit 0
+  else
+    echo "Error: Configuration for ${target_name} is not enabled. Please see error message above."
+    exit 1
+  fi
+fi
+

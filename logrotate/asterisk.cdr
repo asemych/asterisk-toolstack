@@ -1,0 +1,15 @@
+/var/log/asterisk/cdr-csv/*.csv
+/var/log/asterisk/cdr-custom/*.csv
+{
+  missingok
+  nocompress
+  nocopy
+  nocreate
+  prerotate
+    umask 0002
+    log_file=$1;
+    log_dir=/var/log/asterisk/cdr/`date +%Y%m%d`/`date +%H`;
+    mkdir -p $log_dir;
+    mv $log_file $log_dir/${log_file#$(dirname $log_file)/}
+  endscript
+}
